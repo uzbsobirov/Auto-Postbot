@@ -5,6 +5,8 @@ from states.elon import Elon
 from loader import dp, bot
 from aiogram import types
 
+from datetime import date
+
 
 # User qaysi tugmani bosganini aniqlab olamiz
 @dp.message_handler(text="E'lon joylash 🗣", state='*')
@@ -49,19 +51,24 @@ async def elon_nomi(message: types.Message, state: FSMContext):
     await state.update_data(
         {'rasm_3': rasm_3}
     )
-    text = "Endi mashina nechanchi yilda chiqqanini yuboring"
+    text = "Endi mashina nechanchi yilda chiqqanini yuboring\n\nExm: 2019"
     await message.answer(text=text)
     await Elon.yili.set()
 
 @dp.message_handler(state=Elon.yili)
 async def elon_nomi(message: types.Message, state: FSMContext):
     yili = message.text
-    await state.update_data(
-        {'yili': yili}
-    )
-    text = "Mashina necha km yurganini yuboring\n\nExm: 34550"
-    await message.answer(text=text)
-    await Elon.probeg.set()
+    now = date.today().year
+    if int(yili) < now:
+        await state.update_data(
+            {'yili': yili}
+        )
+        text = "Mashina necha km yurganini yuboring\n\nExm: 34550"
+        await message.answer(text=text)
+        await Elon.probeg.set()
+    else:
+        await message.answer(text="Noto'g'ri yil kiritildi!")
+        await Elon.yili.set()
 
 @dp.message_handler(state=Elon.probeg)
 async def elon_nomi(message: types.Message, state: FSMContext):
@@ -69,7 +76,7 @@ async def elon_nomi(message: types.Message, state: FSMContext):
     await state.update_data(
         {'probeg': probeg}
     )
-    text = "Mashina nimada yurishini yuboring"
+    text = "Mashina nimada yurishini yuboring\n\nExm: Benzin"
     await message.answer(text=text)
     await Elon.yoqilgi.set()
 
@@ -85,9 +92,9 @@ async def elon_nomi(message: types.Message, state: FSMContext):
 
 @dp.message_handler(state=Elon.malumot)
 async def elon_nomi(message: types.Message, state: FSMContext):
-    kraska = message.text
+    malumot = message.text
     await state.update_data(
-        {'kraska': kraska}
+        {'malumot': malumot}
     )
     text = "Mashina narxini yuboring\n\nExm: 10.000(Dollarda hisoblanadi!)"
     await message.answer(text=text)
@@ -96,17 +103,21 @@ async def elon_nomi(message: types.Message, state: FSMContext):
 @dp.message_handler(state=Elon.narxi)
 async def elon_nomi(message: types.Message, state: FSMContext):
     narxi = message.text
-    await state.update_data(
-        {'narxi': narxi}
-    )
-    text = "Telefon raqam yuboring\n\nExm: +998996667788"
-    await message.answer(text=text)
-    await Elon.telefon.set()
-
+    narx = narxi.split('.')
+    if len(narx) == 2:
+        await state.update_data(
+            {'narxi': narxi}
+        )
+        text = "Telefon raqam yuboring\n\nExm: +998996667788"
+        await message.answer(text=text)
+        await Elon.telefon.set()
+    else:
+        await message.answer(text="Bu raqam yaroqsiz, boshqattan kiriting!\n\nExm: 10.000(Dollarda hisoblanadi!)")
+        await Elon.narxi.set()
 @dp.message_handler(state=Elon.telefon)
 async def elon_nomi(message: types.Message, state: FSMContext):
     telefon = message.text
-    if len(telefon) == 13:
+    if len(telefon) == 13 and telefon.startswith('+998'):
         await state.update_data(
             {'telefon': telefon}
         )
@@ -123,9 +134,6 @@ async def elon_nomi(message: types.Message, state: FSMContext):
     await state.update_data(
         {'manzil': manzil}
     )
-    await Elon.end.set()
-@dp.message_handler(state=Elon.end)
-async def elon_nomi(message: types.Message, state: FSMContext):
     album = MediaGroup()
 
     data = await state.get_data()
@@ -150,7 +158,8 @@ async def elon_nomi(message: types.Message, state: FSMContext):
            f"Yoqilg'i: {yoqilgi}\n💰 Narxi: {narxi}\n" \
            f"✅ Qo'shimcha ma'lumot: {malumot}\n" \
            f"☎️ Tel: {telefon}\n🚩 Manzil: {manzil}"
-    await message.answer(text=text)
-    # await bot.send_media_group(chat_id=message.chat.id, media=album)
 
+    await bot.send_media_group(chat_id=message.chat.id, media=album)
+    await message.answer(text=text)
     await state.finish()
+
